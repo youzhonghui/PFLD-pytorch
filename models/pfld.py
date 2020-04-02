@@ -69,10 +69,20 @@ class PFLDInference(nn.Module):
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
 
-        self.conv2 = nn.Conv2d(
-            64, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(64)
-        self.relu = nn.ReLU(inplace=True)
+        self.conv2_dw = nn.Sequential(
+            nn.Conv2d(64, 64, 3, 1, 1, groups=64, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(64, 64, 1, 1, 0, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+        )
+
+        # self.conv2 = nn.Conv2d(
+        #     64, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        # self.bn2 = nn.BatchNorm2d(64)
+        # self.relu = nn.ReLU(inplace=True)
 
         self.conv3_1 = InvertedResidual(64, 64, 2, False, 2)
 
@@ -102,7 +112,8 @@ class PFLDInference(nn.Module):
 
     def forward(self, x):  # x: 3, 112, 112
         x = self.relu(self.bn1(self.conv1(x)))  # [64, 56, 56]
-        x = self.relu(self.bn2(self.conv2(x)))  # [64, 56, 56]
+        # x = self.relu(self.bn2(self.conv2(x)))  # [64, 56, 56]
+        x = self.conv2_dw(x)
         x = self.conv3_1(x)
         x = self.block3_2(x)
         x = self.block3_3(x)

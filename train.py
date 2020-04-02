@@ -10,6 +10,7 @@ import os
 import numpy as np
 import torch
 
+from torch import nn
 from torch.utils import data
 from torch.utils.data import DataLoader
 import torchvision
@@ -83,7 +84,7 @@ def validate(wlfw_val_dataloader, plfd_backbone, auxiliarynet, criterion):
             loss = torch.mean(torch.sum((landmark_gt - landmark)**2, axis=1))
             losses.append(loss.cpu().numpy())
     print("===> Evaluate:")
-    print('Eval set: Average loss: {:.4f} '.format(np.mean(losses))
+    print('Eval set: Average loss: {:.4f} '.format(np.mean(losses)))
     return np.mean(losses)
 
 
@@ -102,6 +103,10 @@ def main(args):
     # Step 2: model, criterion, optimizer, scheduler
     plfd_backbone = PFLDInference().to(device)
     auxiliarynet = AuxiliaryNet().to(device)
+    #data parallel
+    plfd_backbone = nn.DataParallel(plfd_backbone)
+    auxiliarynet = nn.DataParallel(auxiliarynet)
+
     criterion = PFLDLoss()
     optimizer = torch.optim.Adam(
         [{
@@ -109,9 +114,9 @@ def main(args):
         }, {
             'params': auxiliarynet.parameters()
         }],
-        lr=args.base_lr,
-        weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=args.lr_patience, verbose=True)
+        lr=1e-4,
+        weight_decay=1e-6)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=args.lr_patience, verbose=True)
 
     # step 3: data
     # argumetion
@@ -147,7 +152,7 @@ def main(args):
         val_loss = validate(wlfw_val_dataloader, plfd_backbone, auxiliarynet,
                             criterion)
 
-        scheduler.step(val_loss)
+        # scheduler.step(val_loss)
         writer.add_scalar('data/weighted_loss', weighted_train_loss, epoch)
         writer.add_scalars('data/loss', {'val loss': val_loss, 'train loss': train_loss}, epoch)
     writer.close()
@@ -156,13 +161,13 @@ def main(args):
 def parse_args():
     parser = argparse.ArgumentParser(description='pfld')
     # general
-    parser.add_argument('-j', '--workers', default=0, type=int)
+    parser.add_argument('-j', '--workers', default=8, type=int)
     parser.add_argument('--devices_id', default='0', type=str)  #TBD
     parser.add_argument('--test_initial', default='false', type=str2bool)  #TBD
 
     # training
     ##  -- optimizer
-    parser.add_argument('--base_lr', default=0.0001, type=int)
+    parser.add_argument('--base_lr', default=0.0001, type=float)
     parser.add_argument('--weight-decay', '--wd', default=1e-6, type=float)
 
     # -- lr
@@ -170,7 +175,7 @@ def parse_args():
 
     # -- epoch
     parser.add_argument('--start_epoch', default=1, type=int)
-    parser.add_argument('--end_epoch', default=1000, type=int)
+    parser.add_argument('--end_epoch', default=256, type=int)
 
     # -- snapshot、tensorboard log and checkpoint
     parser.add_argument(
@@ -197,7 +202,7 @@ def parse_args():
         type=str,
         metavar='PATH')
     parser.add_argument('--train_batchsize', default=256, type=int)
-    parser.add_argument('--val_batchsize', default=8, type=int)
+    parser.add_argument('--val_batchsize', default=128, type=int)
     args = parser.parse_args()
     return args
 

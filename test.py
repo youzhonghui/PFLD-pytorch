@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 from scipy.integrate import simps
 
 import torch
+from torch import nn
 from torchvision import transforms
 from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
@@ -114,6 +115,7 @@ def validate(wlfw_val_dataloader, plfd_backbone):
 def main(args):
     checkpoint = torch.load(args.model_path, map_location=device)
     plfd_backbone = PFLDInference().to(device)
+    plfd_backbone = nn.DataParallel(plfd_backbone)
     plfd_backbone.load_state_dict(checkpoint['plfd_backbone'])
 
     transform = transforms.Compose([transforms.ToTensor()])
