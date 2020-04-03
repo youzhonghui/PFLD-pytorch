@@ -101,8 +101,8 @@ def main(args):
     print_args(args)
 
     # Step 2: model, criterion, optimizer, scheduler
-    plfd_backbone = PFLDInference().to(device)
-    auxiliarynet = AuxiliaryNet().to(device)
+    plfd_backbone = PFLDInference(r=2).to(device)
+    auxiliarynet = AuxiliaryNet(r=2).to(device)
     #data parallel
     plfd_backbone = nn.DataParallel(plfd_backbone)
     auxiliarynet = nn.DataParallel(auxiliarynet)
