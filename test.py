@@ -114,7 +114,7 @@ def validate(wlfw_val_dataloader, plfd_backbone):
 
 def main(args):
     checkpoint = torch.load(args.model_path, map_location=device)
-    plfd_backbone = PFLDInference().to(device)
+    plfd_backbone = PFLDInference(args.r).to(device)
     plfd_backbone = nn.DataParallel(plfd_backbone)
     plfd_backbone.load_state_dict(checkpoint['plfd_backbone'])
 
@@ -129,6 +129,7 @@ def parse_args():
     parser.add_argument('--model_path', default="./checkpoint/snapshot/checkpoint.pth.tar", type=str)
     parser.add_argument('--test_dataset', default='./data/test_data/list.txt', type=str)
     parser.add_argument('--show_image', default=False, type=bool)
+    parser.add_argument('--r', default=1.0, type=float)
     args = parser.parse_args()
     return args
 
